@@ -1,6 +1,6 @@
 package com.example.demorestapi.events;
 
-public enum EvnetStatus {
+public enum EventStatus {
 
     DRAFT, PUBLISHED, BEGAN_ENROLLMENT;
 

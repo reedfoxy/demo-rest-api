@@ -1,13 +1,12 @@
 package com.example.demorestapi.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jdk.jfr.ContentType;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,7 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
-@WebMvcTest
+@SpringBootTest
+@AutoConfigureMockMvc
 public class EventControllerTests {
 
     @Autowired
@@ -30,12 +30,10 @@ public class EventControllerTests {
     @Autowired
     ObjectMapper objectMapper;
 
-    @MockBean
-    EventRepository eventRepository; // WebMvcTest 는 웹용 레파지토리만 등록되기 때문에 레파지토리를 직접 등록한다
-
     @Test
     public void createEvent() throws Exception {
         Event event = Event.builder()
+                .id(100)
                 .name("Spring")
                 .description("description")
                 .beginEnrollmentDateTime(LocalDateTime.of(2018, 11, 23, 14, 21))
@@ -44,12 +42,12 @@ public class EventControllerTests {
                 .endEventDateTime(LocalDateTime.of(2018, 11, 26, 14, 21))
                 .basePrice(100)
                 .maxPrice(200)
+                .limitOfEnrollment(100)
                 .location("location")
+                .free(true)
+                .offline(false)
+                .eventStatus(EventStatus.PUBLISHED)
                 .build();
-        event.setId(10);
-
-        // Mock 객체이기 때문에 Repository save 기능을 사용할 수 없다. 그러므로 save 호출시 움직이는 방향을 변경
-        Mockito.when(eventRepository.save(event)).thenReturn(event);
 
         mockMvc.perform(post("/api/events/")
                     .contentType(MediaType.APPLICATION_JSON_UTF8)
@@ -58,6 +56,9 @@ public class EventControllerTests {
                 .andDo(print())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("id").exists())
-                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_UTF8_VALUE));
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_UTF8_VALUE))
+                .andExpect((jsonPath("id").value(Matchers.not(100))))
+                .andExpect(jsonPath("free").value(Matchers.not(true)))
+                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT.name()));
     }
 }
