@@ -1,7 +1,6 @@
 package com.example.demorestapi.events;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -19,17 +18,26 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 @RequestMapping(value = "/api/events", produces = MediaTypes.HAL_JSON_UTF8_VALUE)
 public class EventController {
 
-    @Autowired
-    EventRepository eventRepository;
+    private final EventRepository eventRepository;
+    private final ModelMapper modelMapper;
+    private final EventValidator eventValidator;
 
-    @Autowired
-    ModelMapper modelMapper;
+    public EventController(EventRepository eventRepository, ModelMapper modelMapper, EventValidator eventValidator) {
+        this.eventRepository = eventRepository;
+        this.modelMapper = modelMapper;
+        this.eventValidator = eventValidator;
+    }
 
     @PostMapping
     public ResponseEntity createdEntity(@RequestBody @Valid EventDto eventDto, Errors errors) {
         if( errors.hasErrors() ) {
             return ResponseEntity.badRequest().build();
         }
+        eventValidator.validate(eventDto, errors);
+        if (errors.hasErrors()){
+            return ResponseEntity.badRequest().build();
+        }
+
         Event event = modelMapper.map(eventDto, Event.class);
         Event newEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
