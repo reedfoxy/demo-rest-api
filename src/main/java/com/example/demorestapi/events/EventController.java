@@ -2,6 +2,7 @@ package com.example.demorestapi.events;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
@@ -10,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.validation.Valid;
-import java.net.URI;
+import java.util.Optional;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 
@@ -30,18 +31,20 @@ public class EventController {
 
     @PostMapping
     public ResponseEntity createdEntity(@RequestBody @Valid EventDto eventDto, Errors errors) {
-        if( errors.hasErrors() ) {
-            return ResponseEntity.badRequest().body(errors);
-        }
-        eventValidator.validate(eventDto, errors);
-        if (errors.hasErrors()){
-            return ResponseEntity.badRequest().body(errors);
+
+        Optional<ResponseEntity> responseEntityErrors = eventValidator.validate(eventDto, errors);
+        if(responseEntityErrors.isPresent()){
+            return responseEntityErrors.get();
         }
 
         Event event = modelMapper.map(eventDto, Event.class);
+        event.update();
         Event newEvent = this.eventRepository.save(event);
-        URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
-        return ResponseEntity.created(createdUri).body(event);
+        ControllerLinkBuilder selfLinkBuilder = linkTo(EventController.class).slash(newEvent.getId());
+        EventResource eventResource = new EventResource(newEvent);
+        eventResource.add(linkTo(EventController.class).withRel("query-events"));
+        eventResource.add(selfLinkBuilder.withRel("update-event"));
+        return ResponseEntity.created(selfLinkBuilder.toUri()).body(eventResource);
     }
 
 }
