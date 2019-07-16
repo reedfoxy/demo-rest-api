@@ -1,19 +1,18 @@
 package com.example.demorestapi.events;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Component
 public class EventValidator {
 
-    public Optional<ResponseEntity> validate(EventDto eventDto, Errors errors){
+    public Errors validate(EventDto eventDto, Errors errors){
 
+        // 필드에 값이 없는 경우
         if ( errors.hasErrors() ){
-            return Optional.of(ResponseEntity.badRequest().body(errors));
+            return errors;
         }
 
         if((eventDto.getBasePrice() > eventDto.getMaxPrice()) && eventDto.getMaxPrice() != 0 ){
@@ -29,9 +28,8 @@ public class EventValidator {
             errors.rejectValue("endEventDateTime", "wrongValue", "endEventDateTime is wrong.");
         }
         // TODO beginEventDateTime
-        if ( errors.hasErrors() ){
-            return Optional.of(ResponseEntity.badRequest().body(errors));
-        }
-        return Optional.empty();
+
+        return errors;
     }
+
 }
